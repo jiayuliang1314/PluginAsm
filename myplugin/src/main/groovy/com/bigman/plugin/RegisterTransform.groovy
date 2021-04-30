@@ -1,9 +1,6 @@
 package com.bigman.plugin
 
-import com.android.build.api.transform.QualifiedContent
-import com.android.build.api.transform.Transform
-import com.android.build.api.transform.TransformException
-import com.android.build.api.transform.TransformInvocation
+import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
 import org.gradle.api.Project
 
@@ -36,8 +33,20 @@ class RegisterTransform extends Transform {
     }
 
     @Override
-    void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
-        super.transform(transformInvocation)
+    void transform(Context context, Collection<TransformInput> inputs, Collection<TransformInput> referencedInputs, TransformOutputProvider outputProvider, boolean isIncremental) throws IOException, TransformException, InterruptedException {
+        super.transform(context, inputs, referencedInputs, outputProvider, isIncremental)
         mProject.logger.warn("start auto-register transform")
+        inputs.each {
+            TransformInput input ->
+                input.jarInputs.each {
+                    JarInput jarInput ->
+                        mProject.logger.warn("jar---" + jarInput.file.absolutePath)
+                }
+
+                input.directoryInputs.each {
+                    DirectoryInput directoryInput->
+                        mProject.logger.warn("dir file ---" + directoryInput.file.absolutePath)
+                }
+        }
     }
 }
