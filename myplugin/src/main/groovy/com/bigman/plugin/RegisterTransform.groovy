@@ -2,12 +2,19 @@ package com.bigman.plugin
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import jdk.internal.org.objectweb.asm.ClassReader
+import jdk.internal.org.objectweb.asm.ClassVisitor
+import jdk.internal.org.objectweb.asm.ClassWriter
+import jdk.internal.org.objectweb.asm.Opcodes
 import org.gradle.api.Project
 
 import java.util.jar.JarFile
 
 class RegisterTransform extends Transform {
     Project mProject
+    File needInsertFile
+    String needInsertClassNameLeft = "com/kite/testplugin/CategoryManager"
+    String insertInterfaceName = "com/kite/testplugin/ICategory"
 
     RegisterTransform(Project project) {
         mProject = project
@@ -42,14 +49,70 @@ class RegisterTransform extends Transform {
             TransformInput input ->
                 input.jarInputs.each {
                     JarInput jarInput ->
-//                        mProject.logger.warn("jar---" + jarInput.file.absolutePath)
                         scanJar(jarInput.file)
                 }
 
                 input.directoryInputs.each {
                     DirectoryInput directoryInput ->
                         mProject.logger.warn("dir file ---" + directoryInput.file.absolutePath)
+
+                        String root = directoryInput.file.absolutePath
+                        if (!root.endsWith(File.separator)) {
+                            root += File.separator
+                        }
+                        mProject.logger.warn("root--" + root)
+                        directoryInput.file.eachFileRecurse { File file ->
+                            def path = file.absolutePath.replace(root, '')
+                            mProject.logger.warn("path--" + path)
+
+                            if (file.isFile()) {
+                                def entryName = path
+                                entryName = entryName.substring(0, entryName.lastIndexOf('.'))
+                                mProject.logger.warn("file--" + file.absolutePath)
+                                if (entryName.endsWith(needInsertClassNameLeft)) {
+                                    needInsertFile = file
+                                    mProject.logger.error("this class is our interface name==" + entryName)
+                                    return
+                                }
+
+                                if (path.endsWith(".class")) {
+                                    asmScanClass(file)
+                                }
+                            }
+                        }
                 }
+        }
+    }
+
+
+    private void asmScanClass(File file) {
+        InputStream inputStream = file.newInputStream()
+        ClassReader cr = new ClassReader(inputStream)
+        ClassWriter cw = new ClassWriter(cr, 0)
+        ScanClassVisitor cv = new ScanClassVisitor(Opcodes.ASM5, cw, file.absolutePath)
+        cr.accept(cv, ClassReader.EXPAND_FRAMES)
+        inputStream.close()
+    }
+
+    class ScanClassVisitor extends ClassVisitor {
+        String filePath
+
+        ScanClassVisitor(int api, ClassVisitor cv, String path) {
+            super(api, cv)
+            this.filePath = path
+        }
+
+        @Override
+        void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+            super.visit(version, access, name, signature, superName, interfaces)
+
+
+            if (interfaces != null) {
+                interfaces.each { itName ->
+                    if (itName == insertInterfaceName)
+                        mProject.logger.error("this class is our interface name==" + name)
+                }
+            }
         }
     }
 
@@ -59,8 +122,11 @@ class RegisterTransform extends Transform {
         while (enumeration.hasMoreElements()) {
             def jarEntry = enumeration.nextElement()
             def entryName = jarEntry.name
-            if(entryName.startsWith("androidx/") || entryName.startsWith("android/") || entryName.startsWith("META-INF/")){
-                break;
+            if (entryName.startsWith("androidx/") || entryName.startsWith("android/") /*|| entryName.startsWith("META-INF/")*/) {
+                break
+            }
+            if (entryName.startsWith("META-INF/")) {
+                continue
             }
             mProject.logger.error("jar---" + file.absolutePath + " class --- " + entryName)
         }
