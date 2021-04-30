@@ -1,6 +1,6 @@
 package com.bigman.plugin
 
-
+import com.android.build.gradle.AppExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -16,6 +16,9 @@ class MyPlugin implements Plugin<Project> {
             throw new IllegalArgumentException(
                     'ResTools gradle plugin can only be applied to android projects.')
         }
+        def android=project.extensions.getByType(AppExtension)
+        def transform=new RegisterTransform(project)
+        android.registerTransform(transform)
 
         println("hello world 2 MyPlugin " + project.name)
     }
