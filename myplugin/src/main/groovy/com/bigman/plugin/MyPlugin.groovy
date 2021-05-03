@@ -16,8 +16,8 @@ class MyPlugin implements Plugin<Project> {
             throw new IllegalArgumentException(
                     'ResTools gradle plugin can only be applied to android projects.')
         }
-        def android=project.extensions.getByType(AppExtension)
-        def transform=new RegisterTransform(project)
+        def android = project.extensions.getByType(AppExtension)
+        def transform = new RegisterTransform(project)
         android.registerTransform(transform)
 
         println("hello world 2 MyPlugin " + project.name)

@@ -2,11 +2,11 @@ package com.bigman.plugin
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
-import jdk.internal.org.objectweb.asm.ClassReader
-import jdk.internal.org.objectweb.asm.ClassVisitor
-import jdk.internal.org.objectweb.asm.ClassWriter
-import jdk.internal.org.objectweb.asm.Opcodes
 import org.gradle.api.Project
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
 
 import java.util.jar.JarFile
 
@@ -71,7 +71,7 @@ class RegisterTransform extends Transform {
                                 mProject.logger.warn("file--" + file.absolutePath)
                                 if (entryName.endsWith(needInsertClassNameLeft)) {
                                     needInsertFile = file
-                                    mProject.logger.error("this class is our interface name==" + entryName)
+                                    mProject.logger.error("this class is our class name==" + entryName)
                                     return
                                 }
 
@@ -82,6 +82,33 @@ class RegisterTransform extends Transform {
                         }
                 }
         }
+        //代码插入
+        if (needInsertFile != null) {
+            generateCodeIntoClassFile(needInsertFile)
+        }
+    }
+
+    private void generateCodeIntoClassFile(File file) {
+        def optClass = new File(file.getParent(), file.name + ".opt")
+        FileInputStream inputStream = new FileInputStream(file)
+        FileOutputStream outputStream = new FileOutputStream(optClass)
+        def bytes = doGenerateCode(inputStream)
+        outputStream.write(bytes)
+        inputStream.close()
+        outputStream.close()
+        if (file.exists()) {
+            file.delete()
+        }
+        optClass.renameTo(file)
+    }
+
+    private byte[] doGenerateCode(InputStream inputStream) {
+        ClassReader cr = new ClassReader(inputStream)
+        ClassWriter cw = new ClassWriter(cr, 0)
+        MyClassVisitor cv = new MyClassVisitor(Opcodes.ASM5, cw)
+        cr.accept(cv, ClassReader.EXPAND_FRAMES)
+        inputStream.close()
+        return cw.toByteArray()
     }
 
 
