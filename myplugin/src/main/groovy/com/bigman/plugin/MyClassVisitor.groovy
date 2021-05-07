@@ -26,6 +26,7 @@ class MyClassVisitor extends ClassVisitor {
 
         @Override
         void visitInsn(int opcode) {
+//            差异代码 我们去掉label和linenumber
             if (opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) {
                 mv.visitTypeInsn(Opcodes.NEW, "com/kite/testplugin/CategoryA")
                 mv.visitInsn(Opcodes.DUP)

@@ -12,6 +12,8 @@ import org.objectweb.asm.Opcodes
 
 import java.util.jar.JarFile
 
+//然后通过Transform遍历找到对应的类和接口
+//ASM对类进行访问和修改，就是基于字节码修改 都非常方便
 class RegisterTransform extends Transform {
     Project mProject
     File needInsertFile
@@ -49,6 +51,7 @@ class RegisterTransform extends Transform {
         mProject.logger.warn("start auto-register transform")
         inputs.each {
             TransformInput input ->
+                //先遍历jar
                 input.jarInputs.each {
                     JarInput jarInput ->
                         scanJar(jarInput.file)
@@ -57,7 +60,8 @@ class RegisterTransform extends Transform {
                         File dest = getDestFile(jarInput, outputProvider)
                         FileUtils.copyFile(src, dest)
                 }
-
+                //TestPlugin\app\build\intermediates\javac\debug\classes
+                //遍历文件夹
                 input.directoryInputs.each {
                     DirectoryInput directoryInput ->
                         mProject.logger.warn("dir file ---" + directoryInput.file.absolutePath)
@@ -67,6 +71,7 @@ class RegisterTransform extends Transform {
                             root += File.separator
                         }
                         mProject.logger.warn("root--" + root)
+
                         File destFile = outputProvider.getContentLocation(directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
 
                         directoryInput.file.eachFileRecurse { File file ->
@@ -88,7 +93,7 @@ class RegisterTransform extends Transform {
                                 }
                             }
                         }
-                        //
+                        //todo 啥意思
                         FileUtils.copyDirectory(directoryInput.file, destFile)
                 }
         }
@@ -98,6 +103,7 @@ class RegisterTransform extends Transform {
         }
     }
 
+    //todo 啥意思
     static File getDestFile(JarInput jarInput, TransformOutputProvider outputProvider) {
         def destName = jarInput.name
         def hexName = DigestUtils.md5Hex(jarInput.file.absolutePath)
@@ -153,7 +159,6 @@ class RegisterTransform extends Transform {
         void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
             super.visit(version, access, name, signature, superName, interfaces)
 
-
             if (interfaces != null) {
                 interfaces.each { itName ->
                     if (itName == insertInterfaceName)
@@ -163,6 +168,8 @@ class RegisterTransform extends Transform {
         }
     }
 
+    //拿到所有的类文件
+    //查看错误堆栈 gradlew assembleDebug --stacktrace
     private void scanJar(File file) {
         def jarFile = new JarFile(file)
         def enumeration = jarFile.entries()
@@ -172,6 +179,7 @@ class RegisterTransform extends Transform {
             if (entryName.startsWith("androidx/") || entryName.startsWith("android/") /*|| entryName.startsWith("META-INF/")*/) {
                 break
             }
+            //META-INF这些都是jar包的签名文件 保证安全和监听jar包变化的对我们来说也是多余的 也可以过滤掉
             if (entryName.startsWith("META-INF/")) {
                 continue
             }
