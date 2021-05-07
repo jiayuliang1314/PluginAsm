@@ -13,7 +13,7 @@ class MyClassVisitor extends ClassVisitor {
     @Override
     MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions)
-        if (name == "register") {
+        if (name == "<clinit>") {
             mv = new MyMethodVisitor(Opcodes.ASM5, mv)
         }
         return mv
@@ -27,10 +27,10 @@ class MyClassVisitor extends ClassVisitor {
         @Override
         void visitInsn(int opcode) {
             if (opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) {
-                mv.visitTypeInsn(Opcodes.NEW, "com/kite/testplugin/CategoryA");
-                mv.visitInsn(Opcodes.DUP);
-                mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "com/kite/testplugin/CategoryA", "<init>", "()V", false);
-                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/kite/testplugin/CategoryManager", "register", "(Lcom/kite/testplugin/ICategory;)V", false);
+                mv.visitTypeInsn(Opcodes.NEW, "com/kite/testplugin/CategoryA")
+                mv.visitInsn(Opcodes.DUP)
+                mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "com/kite/testplugin/CategoryA", "<init>", "()V", false)
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/kite/testplugin/CategoryManager", "register", "(Lcom/kite/testplugin/ICategory;)V", false)
             }
             super.visitInsn(opcode)
         }

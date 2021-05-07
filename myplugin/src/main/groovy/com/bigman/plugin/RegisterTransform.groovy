@@ -2,6 +2,8 @@ package com.bigman.plugin
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import com.android.utils.FileUtils
+import org.apache.commons.codec.digest.DigestUtils
 import org.gradle.api.Project
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -50,6 +52,10 @@ class RegisterTransform extends Transform {
                 input.jarInputs.each {
                     JarInput jarInput ->
                         scanJar(jarInput.file)
+
+                        File src = jarInput.file
+                        File dest = getDestFile(jarInput, outputProvider)
+                        FileUtils.copyFile(src, dest)
                 }
 
                 input.directoryInputs.each {
@@ -61,6 +67,8 @@ class RegisterTransform extends Transform {
                             root += File.separator
                         }
                         mProject.logger.warn("root--" + root)
+                        File destFile = outputProvider.getContentLocation(directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
+
                         directoryInput.file.eachFileRecurse { File file ->
                             def path = file.absolutePath.replace(root, '')
                             mProject.logger.warn("path--" + path)
@@ -70,7 +78,7 @@ class RegisterTransform extends Transform {
                                 entryName = entryName.substring(0, entryName.lastIndexOf('.'))
                                 mProject.logger.warn("file--" + file.absolutePath)
                                 if (entryName.endsWith(needInsertClassNameLeft)) {
-                                    needInsertFile = file
+                                    needInsertFile = new File(destFile.absolutePath + File.separator + path)
                                     mProject.logger.error("this class is our class name==" + entryName)
                                     return
                                 }
@@ -80,12 +88,24 @@ class RegisterTransform extends Transform {
                                 }
                             }
                         }
+                        //
+                        FileUtils.copyDirectory(directoryInput.file, destFile)
                 }
         }
         //代码插入
         if (needInsertFile != null) {
             generateCodeIntoClassFile(needInsertFile)
         }
+    }
+
+    static File getDestFile(JarInput jarInput, TransformOutputProvider outputProvider) {
+        def destName = jarInput.name
+        def hexName = DigestUtils.md5Hex(jarInput.file.absolutePath)
+        if (destName.endsWith(".jar")) {
+            destName = destName.substring(0, destName.length() - 4)
+        }
+        File dest = outputProvider.getContentLocation(destName + "_" + hexName, jarInput.contentTypes, jarInput.scopes, Format.JAR)
+        return dest
     }
 
     private void generateCodeIntoClassFile(File file) {
