@@ -13,6 +13,7 @@ class MyClassVisitor extends ClassVisitor {
     @Override
     MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions)
+        //要注入的是静态代码块
         if (name == "<clinit>") {
             mv = new MyMethodVisitor(Opcodes.ASM5, mv)
         }

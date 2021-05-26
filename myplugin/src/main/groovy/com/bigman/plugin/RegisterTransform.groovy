@@ -41,7 +41,7 @@ class RegisterTransform extends Transform {
 
     @Override
     boolean isIncremental() {
-        //支持增量变异
+        //支持增量编译
         return true
     }
 
@@ -56,6 +56,7 @@ class RegisterTransform extends Transform {
                     JarInput jarInput ->
                         scanJar(jarInput.file)
 
+                        //jar 产物传递
                         File src = jarInput.file
                         File dest = getDestFile(jarInput, outputProvider)
                         FileUtils.copyFile(src, dest)
@@ -93,7 +94,7 @@ class RegisterTransform extends Transform {
                                 }
                             }
                         }
-                        //todo 啥意思
+                        //class 产物传递
                         FileUtils.copyDirectory(directoryInput.file, destFile)
                 }
         }
@@ -137,7 +138,10 @@ class RegisterTransform extends Transform {
         return cw.toByteArray()
     }
 
-
+    /**
+     * asm扫描class
+     * @param file
+     */
     private void asmScanClass(File file) {
         InputStream inputStream = file.newInputStream()
         ClassReader cr = new ClassReader(inputStream)
@@ -168,7 +172,7 @@ class RegisterTransform extends Transform {
         }
     }
 
-    //拿到所有的类文件
+    //拿到jar里的所有的类文件
     //查看错误堆栈 gradlew assembleDebug --stacktrace
     private void scanJar(File file) {
         def jarFile = new JarFile(file)
